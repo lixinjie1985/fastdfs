@@ -1,0 +1,66 @@
+安装libfastcommon
+wget下载，tar zxvf解压
+cd到目录里面
+执行./make.sh
+执行./make.sh install
+
+安装fastdfs
+wget下载，tar zxvf解压
+cd到目录里面
+执行./make.sh
+执行./make.sh install
+
+配置tracker
+cd到/etc/fdfs/目录
+cp tracker.conf.sample tracker.conf
+vim tracker.conf
+修改base_path，指定一个目录
+/usr/bin/fdfs_trackerd /etc/fdfs/tracker.conf start
+查看是否启动成功，netstat -unltp|grep fdfs
+
+配置storage
+cd到/etc/fdfs/目录
+cp storage.conf.sample storage.conf
+vim storage.conf
+修改，base_path，store_path0，tracker_server，这里的路径可以指定为tracker里的路径的storage子目录
+/usr/bin/fdfs_storaged /etc/fdfs/storage.conf start
+查看是否启动成功，netstat -unltp|grep fdfs
+
+查看tracker和storage是否通信，/usr/bin/fdfs_monitor /etc/fdfs/storage.conf
+
+安装nginx模块
+wget下载，tar zxvf或unzip解压
+cd到nginx的源目录（非安装目录）
+执行./configure --prefix=/usr/local/nginx --add-module=/实际目录/fastdfs-nginx-module/src，添加模块
+执行make，重新编译
+执行cp objs/nginx /usr/local/nginx/sbin/，用新生产的可执行文件替换原来的
+查看安装情况/usr/local/nginx/sbin/nginx -V
+停止/usr/local/nginx/sbin/nginx -s stop
+启动/usr/local/nginx/sbin/nginx，会显示新添加的模块进程号
+
+配置nginx模块
+cd到/实际目录/fastdfs-nginx-module/src
+vim mod_fastdfs.conf
+修改tracker_server，url_have_group_name，store_path0
+cp mod_fastdfs.conf /etc/fdfs
+cd到/实际目录/fastdfs源目录/conf
+cp anti-steal.jpg http.conf mime.types /etc/fdfs/
+
+配置nginx
+cd /usr/local/nginx
+vim conf/nginx.conf
+添加一个location指令
+location /group1/M00 {
+    root /usr/local/实际目录/storage/;
+    ngx_fastdfs_module;
+}
+mkdir /实际目录/storage/data/group1
+ln -s /实际目录/storage/data /实际目录/storage/data/group1/M00
+重新加载配置文件/usr/local/nginx/sbin/nginx -s reload
+
+测试
+cd /etc/fdfs
+cp client.conf.sample client.conf
+vim client.conf
+修改base_path，tracker_server
+/usr/bin/fdfs_test /etc/fdfs/client.conf upload /实际目录/test.txt
